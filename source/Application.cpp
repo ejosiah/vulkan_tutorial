@@ -40,6 +40,7 @@ void Application::initVulkan() {
     createFramebuffers();
     createCommandPool();
     createVertexBuffer();
+    createIndexBuffer();
     createCommandBuffers();
     createSyncObjects();
 }
@@ -796,7 +797,8 @@ void Application::createCommandBuffers() {
         VkBuffer vertexBuffers[] = { vertexBuffer };
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-        vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+        vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
         vkCmdEndRenderPass(commandBuffer);
         REPORT_ERROR(vkEndCommandBuffer(commandBuffer), "failed to record command buffer")
     }
@@ -827,6 +829,31 @@ void Application::createVertexBuffer() {
     vkDestroyBuffer(device, stagingBuffer, NO_ALLOCATOR);
     vkFreeMemory(device, stagingBufferMemory, NO_ALLOCATOR);
 
+}
+void Application::createIndexBuffer() {
+    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    createBuffer(bufferSize,  VK_BUFFER_USAGE_TRANSFER_SRC_BIT
+            , VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+            , stagingBuffer
+            , stagingBufferMemory);
+
+    void* data;
+    vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, indices.data(), static_cast<size_t>(bufferSize));
+    vkUnmapMemory(device, stagingBufferMemory);
+
+    createBuffer(bufferSize
+            , VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT
+            , VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+            , indexBuffer, indexBufferMemory);
+
+    copyBuffer(stagingBuffer, indexBuffer, bufferSize);
+
+    vkDestroyBuffer(device, stagingBuffer, NO_ALLOCATOR);
+    vkFreeMemory(device, stagingBufferMemory, NO_ALLOCATOR);
 }
 
 void Application::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
@@ -958,6 +985,8 @@ void Application::cleanup() {
 
     vkDestroyBuffer(device, vertexBuffer, NO_ALLOCATOR);
     vkFreeMemory(device, vertexBufferMemory, nullptr);
+    vkDestroyBuffer(device, indexBuffer, NO_ALLOCATOR);
+    vkFreeMemory(device, indexBufferMemory, nullptr);
     vkDestroyDevice(device, NO_ALLOCATOR);
 
     if(enabledValidationLayers) {
