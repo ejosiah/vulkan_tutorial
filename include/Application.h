@@ -13,8 +13,12 @@
 #include <optional>
 #include <set>
 #include "vulkan_wrapper.h"
+
+#define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <array>
+#include <chrono>
 
 #define REPORT_ERROR(status, msg) if(status != VK_SUCCESS) throw std::runtime_error(msg);
 
@@ -54,6 +58,12 @@ struct Vertex{
 
         return attributeDescriptions;
     }
+};
+
+struct UniformBufferObject{
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 proj;
 };
 
 template<typename Func>
@@ -122,6 +132,8 @@ private:
 
     void drawFrame();
 
+    void updateUniformBuffer(uint32_t currentImage);
+
     void createInstance();
 
     bool checkValidationLayerSupport();
@@ -160,9 +172,17 @@ private:
 
     void createIndexBuffer();
 
+    void createUniformBuffers();
+
     void createCommandBuffers();
 
     void createSyncObjects();
+
+    void createDescriptorPool();
+
+    void createDescriptorSetLayout();
+
+    void createDescriptorSet();
 
     void cleanup();
 
@@ -211,13 +231,19 @@ private:
     VkFormat swapChainImageFormat;
     VkExtent2D swapChainExtent;
     VkRenderPass  renderPass;
+    VkDescriptorSetLayout descriptorSetLayout;
+    VkDescriptorPool  descriptorPool;
     VkPipelineLayout pipelineLayout;
+    std::vector<VkDescriptorSet> descriptorSets;
 
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
 
     VkBuffer indexBuffer;
     VkDeviceMemory indexBufferMemory;
+
+    std::vector<VkBuffer> uniformBuffers;
+    std::vector<VkDeviceMemory>  uniformBufferMemory;
 
     // template<typename Type> Pipeline<Type>
     VkPipeline graphicsPipeline;
