@@ -18,6 +18,7 @@ void Application::initWindow() {
     window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
+    glfwSetKeyCallback(window, onKeyPress);
 }
 
 void Application::run() {
@@ -1128,6 +1129,13 @@ uint32_t Application::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags 
     }
     throw std::runtime_error("failed to find suitable memory type!");
 }
+
+void Application::onKeyPress(GLFWwindow *window, int key, int scancode, int action, int mods) {
+    if(key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE){
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
+    }
+}
+
 
 
 

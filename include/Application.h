@@ -215,6 +215,8 @@ private:
             void* pUserData
             );
 
+    static void onKeyPress(GLFWwindow* window, int key, int scancode, int action, int mods);
+
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
 private:
