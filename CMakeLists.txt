@@ -88,6 +88,4 @@ message(STATUS "conan libs: ${CONAN_LIBS}")
 set(ALL_LIBS "${CONAN_LIBS};${VULKAN_LIB_LIST}")
 
 add_executable(vulkan_tutorial ${CPP_FILES} ${HPP_FILES})
-#add_executable(vulkan_tutorial source/graphics_pipeline_complete.cpp)
-#add_executable(vulkan_tutorial source/depth_buffering.cpp)
 target_link_libraries(vulkan_tutorial ${ALL_LIBS})
