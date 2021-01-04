@@ -20,6 +20,8 @@
 #include <array>
 #include <chrono>
 
+
+
 #define REPORT_ERROR(status, msg) if(status != VK_SUCCESS) throw std::runtime_error(msg);
 
 
@@ -33,6 +35,7 @@ using cstring_t = const char*;
 struct Vertex{
     glm::vec2 pos;
     glm::vec3 color;
+    glm::vec2 textCoord;
 
     static VkVertexInputBindingDescription getBindingDescription(){
         VkVertexInputBindingDescription bindingDescription{};
@@ -43,8 +46,8 @@ struct Vertex{
         return bindingDescription;
     }
 
-    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescription(){
-        std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescription(){
+        std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
 
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
@@ -55,6 +58,11 @@ struct Vertex{
         attributeDescriptions[1].location = 1;
         attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
         attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+        attributeDescriptions[2].binding = 0;
+        attributeDescriptions[2].location = 2;
+        attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[2].offset = offsetof(Vertex, textCoord);
 
         return attributeDescriptions;
     }
@@ -184,6 +192,14 @@ private:
 
     void createDescriptorSet();
 
+    void createTextureImage();
+
+    void createTextureImageView();
+
+    void createTextureSampler();
+
+    VkImageView createImageView(VkImage image, VkFormat format);
+
     void cleanup();
 
     VkShaderModule createShaderModule(const std::vector<char>& code);
@@ -206,7 +222,19 @@ private:
 
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 
+    void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
+                     VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image,
+                     VkDeviceMemory &imageMemory);
+
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
+    void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
+    void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+
+    VkCommandBuffer beginSingleTimeCommands();
+
+    void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
             VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -247,6 +275,11 @@ private:
     std::vector<VkBuffer> uniformBuffers;
     std::vector<VkDeviceMemory>  uniformBufferMemory;
 
+    VkImage textureImage;
+    VkDeviceMemory textureImageMemory;
+    VkImageView textureImageView;
+    VkSampler textureSampler;
+
     // template<typename Type> Pipeline<Type>
     VkPipeline graphicsPipeline;
     std::vector<VkFramebuffer> swapChainFramebuffers;
@@ -266,7 +299,7 @@ private:
 
     const std::vector<const char*> validationLayers = {
             "VK_LAYER_KHRONOS_validation",
-       //     "VK_LAYER_LUNARG_api_dump"
+          //  "VK_LAYER_LUNARG_api_dump"
     };
 
     const std::vector<const char*> deviceExtensions = {
@@ -274,10 +307,10 @@ private:
     };
 
     const std::vector<Vertex> vertices = {
-            {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-            {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-            {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-            {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+            {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0, 0.0f}},
+            {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0, 0.0f}},
+            {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+            {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
     };
 
     const std::vector<uint16_t> indices = {
