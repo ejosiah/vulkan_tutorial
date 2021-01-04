@@ -1341,6 +1341,7 @@ void Application::recreateSwapChain() {
     createImageViews();
     createRenderPass();
     createGraphicsPipeline();
+    createDepthResources();
     createFramebuffers();
     createUniformBuffers();
     createDescriptorPool();
@@ -1353,6 +1354,9 @@ void Application::cleanupSwapChain() {
         vkDestroyBuffer(device, uniformBuffers[i], NO_ALLOCATOR);
         vkFreeMemory(device, uniformBufferMemory[i], NO_ALLOCATOR);
     }
+    vkDestroyImageView(device, depthImageView, NO_ALLOCATOR);
+    vkDestroyImage(device, depthImage, NO_ALLOCATOR);
+    vkFreeMemory(device, depthImageMemory, NO_ALLOCATOR);
     vkDestroyDescriptorPool(device, descriptorPool, NO_ALLOCATOR);
     for(const auto& framebuffer : swapChainFramebuffers) vkDestroyFramebuffer(device, framebuffer, NO_ALLOCATOR);
     vkFreeCommandBuffers(device, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
@@ -1408,9 +1412,6 @@ void Application::cleanup() {
     vkDestroyImageView(device, textureImageView, NO_ALLOCATOR);
     vkDestroyImage(device, textureImage, NO_ALLOCATOR);
     vkFreeMemory(device, textureImageMemory, NO_ALLOCATOR);
-    vkDestroyImageView(device, depthImageView, NO_ALLOCATOR);
-    vkDestroyImage(device, depthImage, NO_ALLOCATOR);
-    vkFreeMemory(device, depthImageMemory, NO_ALLOCATOR);
     vkDestroyDevice(device, NO_ALLOCATOR);
 
     if(enabledValidationLayers) {

@@ -34,9 +34,12 @@ if(AUTO_LOCATE_VULKAN)
     endif()
 else()
     message(STATUS "Attempting to locate Vulkan SDK using manual path......")
-    set(VULKAN_SDK "C:/VulkanSDK")
-    set(VULKAN_VERSION "1.2.162.0")
-    set(VULKAN_PATH "${VULKAN_SDK}/${VULKAN_VERSION}")
+    if(DEFINED ENV{VK_SDK_PATH})
+        set(VULKAN_PATH $ENV{VK_SDK_PATH})
+    elseif(DEFINED ENV{VK_SDK_PATH})
+        set(VULKAN_PATH $ENV{VULKAN_SDK})
+    endif()
+
     message(STATUS "Using manual specified path: ${VULKAN_PATH}")
 
     # Check if manual set path exists
