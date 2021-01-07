@@ -13,6 +13,7 @@
 #include <optional>
 #include <set>
 #include "vulkan_wrapper.h"
+#include "vk_mem_alloc.h"
 
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_RADIANS
@@ -273,7 +274,8 @@ private:
     std::vector<VkDescriptorSet> descriptorSets;
 
     VkBuffer vertexBuffer;
-    VkDeviceMemory vertexBufferMemory;
+   // VkDeviceMemory vertexBufferMemory;
+   VmaAllocation  vertexBufferAllocation;
 
     VkBuffer indexBuffer;
     VkDeviceMemory indexBufferMemory;
@@ -309,7 +311,7 @@ private:
 
     const std::vector<const char*> validationLayers = {
             "VK_LAYER_KHRONOS_validation",
-          //  "VK_LAYER_LUNARG_api_dump"
+          //  "VK_LAYER_NV_GPU_Trace_release_public_2020_2_0"
     };
 
     const std::vector<const char*> deviceExtensions = {
@@ -340,4 +342,8 @@ private:
     const bool enabledValidationLayers = true;
 #endif
     VkDebugUtilsMessengerEXT debugMessenger;
+
+    void createVulkanMemoryAllocator();
+
+    VmaAllocator allocator;
 };

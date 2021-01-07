@@ -39,6 +39,7 @@ void Application::initVulkan() {
     createSurface();
     pickPhysicalDevice();
     createLogicalDevice();
+    createVulkanMemoryAllocator();
     createSwapChain();
     createImageViews();
     createRenderPass();
@@ -190,6 +191,15 @@ void Application::createInstance() {
     auto result = vkCreateInstance(&createInfo, NO_ALLOCATOR, &instance);
 
     REPORT_ERROR(result, "failed to create Vulkan Instance!")
+}
+
+void Application::createVulkanMemoryAllocator(){
+    VmaAllocatorCreateInfo allocInfo{};
+    allocInfo.vulkanApiVersion = VK_API_VERSION_1_2;
+    allocInfo.physicalDevice  = physicalDevice;
+    allocInfo.device = device;
+    allocInfo.instance = instance;
+    auto res = vmaCreateAllocator(&allocInfo, &allocator);
 }
 
 bool Application::checkValidationLayerSupport() {
@@ -1109,27 +1119,31 @@ void Application::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
 void Application::createVertexBuffer() {
     VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = bufferSize;
+    bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+    VmaAllocationCreateInfo allocInfo{};
+    allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
     VkBuffer stagingBuffer;
-    VkDeviceMemory  stagingBufferMemory;
-    createBuffer(bufferSize,  VK_BUFFER_USAGE_TRANSFER_SRC_BIT
-                 , VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-                 , stagingBuffer
-                 , stagingBufferMemory);
-
+    VmaAllocation  stagingAllocation;
+    auto res = vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &stagingBuffer, &stagingAllocation, nullptr);
+    REPORT_ERROR(res, "Failed to allocate staging buffer");
     void* data;
-    vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    vmaMapMemory(allocator, stagingAllocation, &data);
     memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
-    vkUnmapMemory(device, stagingBufferMemory);
+    vmaUnmapMemory(allocator, stagingAllocation);
 
-    createBuffer(bufferSize
-                 , VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
-                 , VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-                 , vertexBuffer, vertexBufferMemory);
+    bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    res = vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &vertexBuffer, &vertexBufferAllocation, nullptr);
+    REPORT_ERROR(res, "Failed to allocate vertex buffer");
 
     copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
 
-    vkDestroyBuffer(device, stagingBuffer, NO_ALLOCATOR);
-    vkFreeMemory(device, stagingBufferMemory, NO_ALLOCATOR);
+    vmaDestroyBuffer(allocator, stagingBuffer, stagingAllocation);
 
 }
 void Application::createIndexBuffer() {
@@ -1404,14 +1418,17 @@ void Application::cleanup() {
     }
 
     vkDestroyDescriptorSetLayout(device, descriptorSetLayout, NO_ALLOCATOR);
-    vkDestroyBuffer(device, vertexBuffer, NO_ALLOCATOR);
-    vkFreeMemory(device, vertexBufferMemory, NO_ALLOCATOR);
+  //  vkDestroyBuffer(device, vertexBuffer, NO_ALLOCATOR);
+ //   vkFreeMemory(device, vertexBufferMemory, NO_ALLOCATOR);
+    vmaDestroyBuffer(allocator, vertexBuffer, vertexBufferAllocation);
     vkDestroyBuffer(device, indexBuffer, NO_ALLOCATOR);
     vkFreeMemory(device, indexBufferMemory, NO_ALLOCATOR);
     vkDestroySampler(device, textureSampler, NO_ALLOCATOR);
     vkDestroyImageView(device, textureImageView, NO_ALLOCATOR);
     vkDestroyImage(device, textureImage, NO_ALLOCATOR);
     vkFreeMemory(device, textureImageMemory, NO_ALLOCATOR);
+
+    vmaDestroyAllocator(allocator);
     vkDestroyDevice(device, NO_ALLOCATOR);
 
     if(enabledValidationLayers) {
